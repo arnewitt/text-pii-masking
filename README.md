@@ -13,7 +13,7 @@ Create a `.env` file in the project root directory:
 ```bash
 OPENAI_API_KEY=**** # your API key
 OPENAI_MODEL=gpt-4o-mini # any model available
-BASE_URL=https://api.openai.com/v1
+BASE_URL=https://api.openai.com/v1 # any compatible API base url, including self-hosted
 ```
 
 ## Getting started
