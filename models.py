@@ -16,19 +16,32 @@ class PIITypeConfig(BaseModel):
 class MaskResponse(BaseModel):
     """API response model for masked PII text."""
 
-    original_text: str
-    masked_text: str
-    detected_pii: List[Dict[str, str]]
+    original_texts: List[str] = Field(
+        ...,
+        title="Original Texts",
+        description="List of original input texts before masking",
+    )
+    masked_texts: List[str] = Field(
+        ..., title="Masked Texts", description="List of texts with PII masked"
+    )
+    detected_pii: List[List[Dict[str, str]]] = Field(
+        ...,
+        title="Detected PII",
+        description="List of PII detected in each text. Each inner list contains dictionaries of PII found in the corresponding text.",
+    )
 
 
 class MaskRequest(BaseModel):
     """API request model for masking PII in text."""
 
-    text: str = Field(
+    texts: List[str] = Field(
         ...,
-        title="Input Text",
-        description="The text to analyze and mask PII from",
-        example="John Doe's email is john.doe@example.com",
+        title="Input Texts",
+        description="List of texts to analyze and mask PII from",
+        example=[
+            "John Doe's email is john.doe@example.com",
+            "John Doe's other email is johns.other.mail@example.com",
+        ],
     )
     pii_config: Dict[str, PIITypeConfig] = Field(
         ...,

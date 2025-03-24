@@ -40,17 +40,19 @@ class PIIConfig(BaseModel):
 
 def main():
     # Sample input text
-    input_text = (
+    input_texts = [
         "John Doe's email is john.doe@example.com. "
         "His first name is John and his last name is Doe. "
         "His second email is dem@example.com."
-    )
+    ]
 
     # Extract PII from input text
-    extracted_pii = extract_pii(input_text, PIIConfig)
+    extracted_pii = [extract_pii(text, PIIConfig) for text in input_texts]
 
     # Mask PII in input text
-    masked_text = mask_pii(input_text, extracted_pii, PIIConfig)
+    masked_text = [
+        mask_pii(text, pii, PIIConfig) for text, pii in zip(input_texts, extracted_pii)
+    ]
 
     pprint(f"Extracted pii: {extracted_pii}")
     pprint(f"Masked text: {masked_text}")

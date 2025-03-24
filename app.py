@@ -29,18 +29,18 @@ app = FastAPI(
 @app.post(
     "/mask-pii",
     response_model=MaskResponse,
-    summary="Mask PII in text",
-    description="Analyzes the input text and masks detected PII according to custom configuration",
+    summary="Mask PII in multiple texts",
+    description="Analyzes multiple input texts and masks detected PII according to custom configuration",
 )
 async def mask_pii_endpoint(request: MaskRequest):
     """
-    Endpoint to mask PII in provided text with custom configuration.
+    Endpoint to mask PII in provided texts with custom configuration.
 
     Args:
-        request: MaskRequest object containing the input text and PII config
+        request: MaskRequest object containing the list of input texts and PII config
 
     Returns:
-        MaskResponse containing original text, masked text, and detected PII
+        MaskResponse containing original texts, masked texts, and detected PII
 
     Raises:
         HTTPException: If processing fails or config is invalid
@@ -50,27 +50,44 @@ async def mask_pii_endpoint(request: MaskRequest):
         if not request.pii_config:
             raise ValueError("PII configuration cannot be empty")
 
+        # Validate input texts
+        if not request.texts:
+            raise ValueError("Input texts cannot be empty")
+
+        if not all(isinstance(text, str) for text in request.texts):
+            raise ValueError("All input texts must be strings")
+
+        if not all(text.strip() for text in request.texts):
+            raise ValueError("Input texts cannot be empty strings or whitespace only")
+
         # Create dynamic PII config class
         DynamicPIIConfig: Type[BaseModel] = create_dynamic_pii_config(
             request.pii_config
         )
 
-        # Extract PII using the dynamic config
-        extracted_pii = extract_pii(request.text, DynamicPIIConfig)
+        # Process each text
+        masked_texts = []
+        all_detected_pii = []
 
-        # Mask the text
-        masked_text = mask_pii(request.text, extracted_pii, DynamicPIIConfig)
+        for text in request.texts:
+            # Extract PII using the dynamic config
+            extracted_pii = extract_pii(text, DynamicPIIConfig)
+            all_detected_pii.append(extracted_pii)
+
+            # Mask the text
+            masked_text = mask_pii(text, extracted_pii, DynamicPIIConfig)
+            masked_texts.append(masked_text)
 
         # Log the operation
         logger.info(
-            f"Processed text with {len(request.pii_config)} PII types. "
-            f"Detected {len(extracted_pii)} PII items"
+            f"Processed {len(request.texts)} texts with {len(request.pii_config)} PII types. "
+            f"Detected {sum(len(pii) for pii in all_detected_pii)} total PII items"
         )
 
         return MaskResponse(
-            original_text=request.text,
-            masked_text=masked_text,
-            detected_pii=extracted_pii,
+            original_texts=request.texts,
+            masked_texts=masked_texts,
+            detected_pii=all_detected_pii,
         )
 
     except ValidationError as e:
