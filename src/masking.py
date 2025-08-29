@@ -1,10 +1,11 @@
-import os
 import re
 import json
 import logging
+
 from typing import List, Dict, Type
 from pydantic import BaseModel
 from openai import OpenAI, OpenAIError
+from src.core.config import Settings
 
 # Configure logging
 logging.basicConfig(
@@ -12,12 +13,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Load settings
+settings = Settings()
+
 # Initialize OpenAI client
 try:
     client = OpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY", ""),
-        base_url=os.environ.get("BASE_URL", "https://api.openai.com/v1"),
-    )  # default to OpenAI API v1, but any compatible service can be used, including locally hosted LLMs
+        api_key=settings.openai_api_key,
+        base_url=settings.openai_base_url,
+    )
 except Exception as e:
     logger.error(f"Failed to initialize OpenAI client: {str(e)}")
     raise
@@ -95,13 +99,16 @@ def parse_json_response(response: str) -> List[Dict[str, str]]:
         raise
 
 
-def extract_pii(text: str, pii_config: Type[BaseModel]) -> List[Dict[str, str]]:
+def extract_pii(
+    text: str, pii_config: Type[BaseModel], settings: Settings = settings
+) -> List[Dict[str, str]]:
     """
     Extract PII from the given text using OpenAI API.
 
     Args:
         text: Input text to analyze
         pii_config: PII configuration model class
+        settings: Application settings
 
     Returns:
         List of dictionaries containing detected PII and their types
@@ -118,7 +125,7 @@ def extract_pii(text: str, pii_config: Type[BaseModel]) -> List[Dict[str, str]]:
         types_str = ", ".join(pii_types)
 
         completion = client.beta.chat.completions.parse(
-            model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+            model=settings.openai_model_name,
             messages=[
                 {
                     "role": "system",
@@ -146,22 +153,8 @@ def extract_pii(text: str, pii_config: Type[BaseModel]) -> List[Dict[str, str]]:
 
 
 def mask_pii(
-    input_text: str, extracted_pii: List[Dict[str, str]], config: Type[BaseModel]
+    input_text: str, extracted_pii: list[dict[str, str]], config: type[BaseModel]
 ) -> str:
-    """
-    Mask detected PII in the input text using configured mask values.
-
-    Args:
-        input_text: Original text containing PII
-        extracted_pii: List of detected PII items with their types
-        config: PII configuration class with mask definitions
-
-    Returns:
-        Text with all detected PII replaced by their corresponding masks
-
-    Raises:
-        ValueError: If PII configuration is invalid
-    """
     try:
         masked_text = input_text
         if not hasattr(config, "model_fields"):
@@ -178,7 +171,9 @@ def mask_pii(
                 continue
 
             if pii_type in config_fields:
-                mask = config_fields[pii_type].json_schema_extra.get("mask")
+                # json_schema_extra may be None → use {} as fallback
+                extras = config_fields[pii_type].json_schema_extra or {}
+                mask = extras.get("mask")
                 if mask:
                     masked_text = masked_text.replace(pii_value, mask)
                 else:

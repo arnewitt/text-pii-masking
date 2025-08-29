@@ -1,15 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ValidationError
 from typing import Type
-from dotenv import load_dotenv
-from models import MaskResponse, MaskRequest, create_dynamic_pii_config
-
+from src.models import MaskResponse, MaskRequest, create_dynamic_pii_config
+from src.masking import extract_pii, mask_pii
 import logging
-
-# Load environment variables
-load_dotenv()
-
-from masking import extract_pii, mask_pii
 
 
 # Configure logging
@@ -109,23 +103,3 @@ async def mask_pii_endpoint(request: MaskRequest):
 async def health_check():
     """Simple health check endpoint."""
     return {"status": "healthy"}
-
-
-if __name__ == "__main__":
-    import argparse
-    import uvicorn
-
-    # Create argument parser
-    parser = argparse.ArgumentParser(description="Run Uvicorn server")
-    parser.add_argument(
-        "--host", type=str, default="0.0.0.0", help="Host to bind (default: 0.0.0.0)"
-    )
-    parser.add_argument(
-        "--port", type=int, default=8081, help="Port to bind (default: 8081)"
-    )
-
-    # Parse arguments
-    args = parser.parse_args()
-
-    # Run Uvicorn with parsed arguments
-    uvicorn.run(app, host=args.host, port=args.port)
