@@ -1,7 +1,6 @@
 import pytest
-from pydantic import ValidationError
-
 from src.core.config import Settings
+from pydantic import ValidationError
 
 
 def test_env_vars_override(monkeypatch):
