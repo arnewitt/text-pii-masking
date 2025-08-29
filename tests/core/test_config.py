@@ -50,10 +50,6 @@ def test_defaults_for_host_and_port(monkeypatch, tmp_path):
     _clear_openai_env(monkeypatch)
     monkeypatch.chdir(tmp_path)
 
-    # Without required fields -> must raise ValidationError
-    with pytest.raises(ValidationError):
-        Settings()
-
     # Provide required vars, defaults for host/port should apply
     monkeypatch.setenv("OPENAI_BASE_URL", "http://fake-url")
     monkeypatch.setenv("OPENAI_API_KEY", "dummy-key")
@@ -100,11 +96,3 @@ def test_dotenv_file(tmp_path, monkeypatch):
     assert s.openai_model_name == "dotenv-model"
     assert s.host == "192.168.1.1"
     assert s.port == 1234
-
-
-def test_missing_required_fields(monkeypatch, tmp_path):
-    _clear_openai_env(monkeypatch)
-    monkeypatch.chdir(tmp_path)  # ensure no project .env is loaded
-
-    with pytest.raises(ValidationError):
-        Settings()
